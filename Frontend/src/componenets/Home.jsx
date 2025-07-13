@@ -21,7 +21,7 @@ const Home = () => {
         formData.append('file', selectedFile);
 
         try{
-           const response = await axios.post("http://localhost:3000/convertFile", formData,{
+           const response = await axios.post("https://pdf-convert-rrqa.onrender.com/convert", formData,{
                 responseType: 'blob',
             })
             const url = window.URL.createObjectURL(new Blob([response.data]));
