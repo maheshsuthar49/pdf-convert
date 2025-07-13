@@ -1,43 +1,60 @@
-const express = require('express')
-const multer = require('multer')
+const express = require('express');
+const multer = require('multer');
 const docxTopdf = require('docx-pdf');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 
+const app = express();
 
-const app = express()
-const port = 3000
+// ✅ Use environment variable for port (important for Render)
+const port = process.env.PORT || 3000;
+
 app.use(cors());
 
-// seting up file storage
+// ✅ Optional root route so Render doesn’t show "Cannot GET /"
+app.get('/', (req, res) => {
+    res.send('🎉 PDF Convert Backend is Live!');
+});
+
+// ✅ Make sure "uploads" and "files" folders exist (prevent crash)
+const ensureDir = (dir) => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+};
+ensureDir('uploads');
+ensureDir('files');
+
+// ✅ Setup file storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads')
+        cb(null, 'uploads');
     },
     filename: function (req, file, cb) {
-
         cb(null, file.originalname);
-    }
-})
+    },
+});
 
-const upload = multer({ storage: storage })
+const upload = multer({ storage: storage });
 
+// ✅ Main route for file conversion
 app.post('/convertFile', upload.single('file'), function (req, res, next) {
     try {
-        if(!req.file){
+        if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        // Replace extension with .pdf
-        const outputFileName = path.basename(req.file.originalname, path.extname(req.file.originalname)) + '.pdf';
+        const outputFileName =
+            path.basename(req.file.originalname, path.extname(req.file.originalname)) + '.pdf';
         const outputPath = path.join(__dirname, 'files', outputFileName);
 
-        docxTopdf(req.file.path, outputPath, (err, result)=> {
+        docxTopdf(req.file.path, outputPath, (err, result) => {
             if (err) {
                 console.log(err);
                 return res.status(500).json({ message: 'Error converting file' });
             }
-            // Wait for file to be written, then send
+
             res.download(outputPath, (err) => {
                 if (err) {
                     console.log('Download error:', err);
@@ -47,12 +64,12 @@ app.post('/convertFile', upload.single('file'), function (req, res, next) {
             });
         });
     } catch (error) {
-        console.log(error)
+        console.log(error);
         res.status(500).json({ message: 'Internal server error' });
     }
-})
+});
 
-
+// ✅ Start server
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
+    console.log(`🚀 Server is running on port ${port}`);
 });
