@@ -8,7 +8,7 @@ const fs = require('fs');
 const app = express();
 
 // ✅ Use environment variable for port (important for Render)
-const port = process.env.PORT || 3000;
+const port = 3000
 
 app.use(cors());
 
