@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
-const docxTopdf = require('docx-pdf');
+// const docxTopdf = require('docx-pdf');
+import { PDFDocument, rgb } from "pdf-lib";
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
@@ -39,37 +40,36 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ✅ Main route for file conversion
-app.post('/convertFile', upload.single('file'), function (req, res, next) {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
-        }
+app.post("/convert", upload.single("file"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
+    const fileBuffer = fs.readFileSync(filePath);
+    const fileName = req.file.originalname;
 
-        const outputFileName =
-            path.basename(req.file.originalname, path.extname(req.file.originalname)) + '.pdf';
-        const outputPath = path.join(__dirname, 'files', outputFileName);
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([600, 400]);
 
-        docxTopdf(req.file.path, outputPath, (err, result) => {
-            if (err) {
-                console.log(err);
-                return res.status(500).json({ message: 'Error converting file' });
-            }
+    page.drawText(`Uploaded File: ${fileName}`, {
+      x: 50,
+      y: 350,
+      size: 24,
+      color: rgb(0, 0, 0),
+    });
 
-            res.download(outputPath, (err) => {
-                if (err) {
-                    console.log('Download error:', err);
-                } else {
-                    console.log('File downloaded successfully');
-                }
-            });
-        });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
+    const pdfBytes = await pdfDoc.save();
 
-// ✅ Start server
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${fileName.split('.')[0]}.pdf"`,
+    });
+
+    res.send(pdfBytes);
+    fs.unlinkSync(filePath); // cleanup
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ message: "Failed to generate PDF." });
+  }
+});// ✅ Start server
 app.listen(port, () => {
     console.log(`🚀 Server is running on port ${port}`);
 });
